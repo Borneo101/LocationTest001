@@ -1,61 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Berbagi Lokasi - OpsBorneo</title>
+  <title>Berbagi Lokasi Otomatis - OpsBorneo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f2f2f2; }
+    h2 { color: #333; }
+    #status { margin-top: 20px; background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+  </style>
 </head>
 <body>
   <h2>Berbagi Lokasi Langsung - OpsBorneo</h2>
-  <p id="status">Mengambil lokasi...</p>
+  <p>Lokasi kamu akan dikirim otomatis setiap 5 menit.</p>
+  <div id="status">Menunggu lokasi...</div>
 
   <script>
-    const telegramBotToken = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
-    const chatId = "5677912817";
-
-    // Ambil ID pengguna dari parameter URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const userId = urlParams.get('id') || "TANPA_ID";
+    const TOKEN = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko"; // Ganti dengan token bot kamu
+    const chatId = "5677912817"; // Ganti dengan chat ID kamu
+    const userId = "Uta001"; // Ganti ID pengguna
 
     function kirimLokasi(pos) {
       const lat = pos.coords.latitude;
       const lon = pos.coords.longitude;
-      const linkMaps = `https://maps.google.com/?q=${lat},${lon}`;
-      const pesan = `[ID: ${userId}]\nLokasi dikirim: ${lat}, ${lon}\n${linkMaps}`;
-      document.getElementById("status").innerText = pesan;
+      const caption = `[ID: ${userId}]`;
 
-      fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: pesan
+      const url = `https://api.telegram.org/bot${TOKEN}/sendLocation?chat_id=${chatId}&latitude=${lat}&longitude=${lon}&caption=${encodeURIComponent(caption)}`;
+
+      fetch(url)
+        .then(response => {
+          document.getElementById("status").innerText = `${caption}\nLokasi dikirim: ${lat}, ${lon}`;
         })
-      });
+        .catch(error => {
+          document.getElementById("status").innerText = "Gagal mengirim lokasi.";
+        });
     }
 
-    function mulaiPantau() {
-      if (!navigator.geolocation) {
-        document.getElementById("status").innerText = "Geolocation tidak didukung di browser ini.";
-        return;
+    function gagalAmbilLokasi(err) {
+      document.getElementById("status").innerText = "Gagal mendapatkan lokasi. Mohon izinkan akses lokasi di browser kamu.";
+    }
+
+    function updateLokasi() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(kirimLokasi, gagalAmbilLokasi);
+      } else {
+        document.getElementById("status").innerText = "Browser tidak mendukung geolokasi.";
       }
-
-      navigator.geolocation.getCurrentPosition(
-        kirimLokasi,
-        () => document.getElementById("status").innerText = "Gagal mendapatkan lokasi.",
-        { enableHighAccuracy: true }
-      );
-
-      // Perbarui lokasi setiap 5 menit
-      setInterval(() => {
-        navigator.geolocation.getCurrentPosition(
-          kirimLokasi,
-          () => document.getElementById("status").innerText = "Gagal memperbarui lokasi.",
-          { enableHighAccuracy: true }
-        );
-      }, 300000); // 5 menit
     }
 
-    mulaiPantau();
+    // Kirim lokasi saat halaman dibuka
+    updateLokasi();
+
+    // Kirim ulang setiap 5 menit (300000 ms)
+    setInterval(updateLokasi, 300000);
   </script>
 </body>
 </html>
