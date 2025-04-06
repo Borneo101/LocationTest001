@@ -10,16 +10,16 @@
 </head>
 <body>
   <h2>Live Lokasi - OpsBorneo</h2>
-  <p>Halaman ini akan terus mengirim lokasi kamu secara otomatis selama halaman terbuka.</p>
+  <p>Halaman ini akan terus mengirim lokasi kamu secara otomatis setiap 5 menit selama halaman terbuka.</p>
   <div id="status">Menunggu lokasi...</div>
 
   <script>
     const TOKEN = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
-    const chatId = "5677912817";  // Chat ID kamu
-    const userId = "Uta001";      // Bisa diganti sesuai nama pengguna
+    const chatId = "5677912817";
+    const userId = "Uta001"; // Ganti sesuai nama pengguna jika perlu
 
     let lastSent = 0;
-    const interval = 300000; // 5 menit (dalam milidetik)
+    const interval = 300000; // 5 menit dalam milidetik
 
     function kirimLokasi(pos) {
       const now = Date.now();
