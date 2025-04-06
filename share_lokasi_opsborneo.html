@@ -1,65 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Live Lokasi OpsBorneo</title>
+  <title>Berbagi Lokasi - OpsBorneo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
   <h2>Berbagi Lokasi Langsung - OpsBorneo</h2>
-  <p id="status">Menunggu izin lokasi...</p>
+  <p id="status">Mengambil lokasi...</p>
 
   <script>
-    // Ganti dengan token bot kamu
-    const token = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
-    
-    // Ganti dengan chat ID kamu
+    const telegramBotToken = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
     const chatId = "5677912817";
 
-    // Fungsi untuk mengirim lokasi ke Telegram bot
-    function sendLocation(lat, lon) {
-      const url = `https://api.telegram.org/bot${token}/sendLocation?chat_id=${chatId}&latitude=${lat}&longitude=${lon}`;
+    // Ambil ID dari parameter URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('id') || "TANPA_ID";
 
-      fetch(url)
-        .then(response => {
-          if (response.ok) {
-            document.getElementById("status").innerText = `Lokasi dikirim: ${lat}, ${lon}`;
-          } else {
-            document.getElementById("status").innerText = "Gagal mengirim lokasi ke bot.";
-          }
+    function kirimLokasi(pos) {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+      const pesan = `[ID: ${userId}] Lokasi dikirim: ${lat}, ${lon}`;
+      document.getElementById("status").innerText = pesan;
+
+      fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: pesan
         })
-        .catch(error => {
-          document.getElementById("status").innerText = "Terjadi error saat kirim lokasi: " + error;
-        });
+      });
     }
 
-    // Mulai pantau pergerakan
-    function startLiveTracking() {
+    function mulaiPantau() {
       if (!navigator.geolocation) {
-        document.getElementById("status").innerText = "Browser tidak mendukung geolocation.";
+        document.getElementById("status").innerText = "Geolocation tidak didukung di browser ini.";
         return;
       }
 
-      document.getElementById("status").innerText = "Menunggu pergerakan lokasi...";
-
-      navigator.geolocation.watchPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-          sendLocation(lat, lon);
-        },
-        (error) => {
-          document.getElementById("status").innerText = "Akses lokasi ditolak atau gagal.";
-        },
-        {
-          enableHighAccuracy: true,
-          maximumAge: 5000,
-          timeout: 10000
-        }
+      navigator.geolocation.getCurrentPosition(
+        kirimLokasi,
+        () => document.getElementById("status").innerText = "Gagal mendapatkan lokasi.",
+        { enableHighAccuracy: true }
       );
+
+      // Setiap 5 menit (300.000 ms)
+      setInterval(() => {
+        navigator.geolocation.getCurrentPosition(
+          kirimLokasi,
+          () => document.getElementById("status").innerText = "Gagal memperbarui lokasi.",
+          { enableHighAccuracy: true }
+        );
+      }, 300000);
     }
 
-    // Jalankan saat halaman dimuat
-    startLiveTracking();
+    mulaiPantau();
   </script>
 </body>
 </html>
